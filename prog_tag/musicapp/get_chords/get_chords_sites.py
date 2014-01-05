@@ -74,6 +74,3 @@ def get_chords(title,artist):
     
 def test():
     get_chords("society", "eddie vedder") 
-
-
-
