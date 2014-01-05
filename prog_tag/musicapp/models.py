@@ -15,7 +15,7 @@ class Tag(models.Model):
     def __repr__(self):
         return self.name
     
-class chord(models.Model):
+class Chord(models.Model):
     root = models.CharField()
     QUALITIES = (
         ('aug', 'augmented'),
@@ -87,7 +87,7 @@ class Song(models.Model):
     title = models.CharField()
     artist = models.CharField()
     tags = models.ManyToManyField(Tag)
-    chords = models.ManyToManyField()
+    chords = models.ManyToManyField(Chord)
     def __repr__(self):
         return self.title + "," + self.artist
 
