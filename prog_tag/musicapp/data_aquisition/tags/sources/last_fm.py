@@ -1,5 +1,6 @@
 import os
 import json
+from musicapp.models import *
 
 last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
 certainty_threshold = 85
@@ -69,3 +70,14 @@ def last_fm_tags_iterator():
     print ("number of songs = {0}\nnumber of songs with tags = {1}\naverage number "\
         +" of tags per song = {2}").format(number_of_songs,number_of_songs_with_tags,\
                                        average_tags_per_song)    
+
+def update_database_with_last_fm_tags():
+    for title, artist, tags in last_fm_tags_iterator():
+        song = Song()
+        song.title = title
+        song.artist = artist
+        song.tags = tags
+        song.save()
+    print 'done updating database'
+    
+#update_database_with_last_fm_tags()
