@@ -1,6 +1,7 @@
 import os
 import json
 from musicapp.models import *
+from django.core import management
 
 last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
 certainty_threshold = 85
@@ -64,7 +65,7 @@ def last_fm_tags_iterator():
                 if certain_tags: number_of_songs_with_tags+=1
                 average_tags_per_song += len(certain_tags)
                 yield (song_data['title'],song_data['artist']),certain_tags
-            if not number_of_songs % 20000:
+            if not number_of_songs % 5000:
                 print "songs_read={}".format(number_of_songs)
     average_tags_per_song /= float(number_of_songs)
     print ("number of songs = {0}\nnumber of songs with tags = {1}\naverage number "\
@@ -72,12 +73,17 @@ def last_fm_tags_iterator():
                                        average_tags_per_song)    
 
 def update_database_with_last_fm_tags():
-    for title, artist, tags in last_fm_tags_iterator():
-        song = Song()
-        song.title = title
-        song.artist = artist
-        song.tags = tags
+    for (title, artist), tags in last_fm_tags_iterator():
+        #chords go through Chord_index
+        song = Song(title=title, artist=artist) 
+        tags=[Tag(tag) for tag in tags]
+        (tag.save() for tag in tags)
+        (song.tags.add(tag) for tag in tags)
+        
+        #when fails, there's some rollback problem
         song.save()
     print 'done updating database'
     
-#update_database_with_last_fm_tags()
+management.call_command('syncdb', verbosity=0, interactive=False)
+#management.call_command('flush', verbosity=0, interactive=False)
+update_database_with_last_fm_tags()
