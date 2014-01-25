@@ -11,30 +11,39 @@ class ChordsNotFoundException(Exception):
         return "Could not find chords for song - " + self.title + ", by - " + self.artist
 
 """
-Testing funtion -
-it gets all chord vectors from all sources and prints them
+try to get a chord vector from any of the sources.
+when a vector is found - it's returned. 
+if no source returns a vector - a 'ChordsNotFoundException' is raised.
 """
 def get_chords(title,artist):
-#    print "Starting..."
-    chord_vector_s = sites_ec.get_chords(title, artist)
-#    print "e-chords: "+str(chord_vector_s)
-    chord_vector_u = sites_ug.get_chords(title, artist)
-#    print "ultimate: "+str(chord_vector_u)
-    chord_vector_c = sites_ch.get_chords(title, artist)
-#    for chord_vector_c in chord_vectors_c:
-#        print "chordie: "+str(chord_vector_c)
-#    print "That's it!"
+    chord_vectors_c = sites_ch.get_chords(title, artist)
+    for chord_vector_c in chord_vectors_c:
+        if chord_vector_c:
+            return chord_vector_c
+   
+    chord_vector_ec = sites_ec.get_chords(title, artist)
+    if chord_vector_ec:
+        return chord_vector_ec
     
-    # TODO choose between vectors (in the right way)
-    if chord_vector_s:
-        return chord_vector_s
+    chord_vector_u = sites_ug.get_chords(title, artist)
     if chord_vector_u:
         return chord_vector_u
-    if chord_vector_c:
-        return chord_vector_c
+    
     raise ChordsNotFoundException(title,artist)
     
     
 
+def print_all_vectors(title, artist):
+    print "Starting..."
+    chord_vector_s = sites_ec.get_chords(title, artist)
+    print "e-chords: "+str(chord_vector_s)
+    chord_vector_u = sites_ug.get_chords(title, artist)
+    print "ultimate: "+str(chord_vector_u)
+    chord_vectors_c = sites_ch.get_chords(title, artist)
+    for chord_vector_c in chord_vectors_c:
+        print "chordie: "+str(chord_vector_c)
+    print "That's it!"
+
 def test():
-    get_chords("One to all","Yakuzi") 
+    print_all_vectors("One to all","Yakuzi")
+ 

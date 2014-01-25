@@ -3,7 +3,9 @@ import json
 from musicapp.models import *
 from django.core import management
 
-last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
+
+# last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
+last_home = "C:\\Users\\bruchim\\Desktop\\Projects\\Me\\Sadna\\lastfm_train"
 certainty_threshold = 85
 def read_last_fm_tags():
     """
@@ -62,7 +64,8 @@ def last_fm_tags_iterator():
                 #if song_data['tags']:
                 certain_tags = {tag for tag,certainty in song_data['tags'] if \
                     int(certainty) >= certainty_threshold}
-                if certain_tags: number_of_songs_with_tags+=1
+                if not certain_tags: continue
+                number_of_songs_with_tags+=1
                 average_tags_per_song += len(certain_tags)
                 yield (song_data['title'],song_data['artist']),certain_tags
             if not number_of_songs % 5000:
@@ -76,12 +79,17 @@ def update_database_with_last_fm_tags():
     for (title, artist), tags in last_fm_tags_iterator():
         #chords go through Chord_index
         song = Song(title=title, artist=artist) 
-        tags=[Tag(tag) for tag in tags]
-        (tag.save() for tag in tags)
-        (song.tags.add(tag) for tag in tags)
         
-        #when fails, there's some rollback problem
+        #the song should be first saved in the db, in order for it to get a uid,
+        #and only then its able to add a 'many-to-many' relationship with tags.
         song.save()
+
+        #don't create multiple instances of same tag - get_or_create
+        #after created, associate with song
+        for tag in tags:
+            tag_obj, created = Tag.objects.get_or_create(name=tag)
+            song.tags.add(tag_obj)
+        
     print 'done updating database'
     
 management.call_command('syncdb', verbosity=0, interactive=False)

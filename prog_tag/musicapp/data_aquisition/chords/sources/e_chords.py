@@ -25,12 +25,14 @@ def get_chord_vector(chords_url):
 given (artist, title), finds best chords, scrapes chord vector
 """
 def get_chords(title,artist):
-    name = artist.replace(' ','-')+"/"+title.replace('\'','').replace(' ','-')
-    all_chords_url = (BASE_URL + name)
-    chord_vector = get_chord_vector(all_chords_url)
-    #print chord_vector
-    return chord_vector
-    
+    try:
+        name = artist.replace(' ','-')+"/"+title.replace('\'','').replace(' ','-')
+        all_chords_url = (BASE_URL + name)
+        chord_vector = get_chord_vector(all_chords_url)
+        #print chord_vector
+        return chord_vector
+    except:
+        return None
     
     
 def test():

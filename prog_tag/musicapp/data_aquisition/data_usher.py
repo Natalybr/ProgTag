@@ -31,7 +31,7 @@ def aquire_song_chords():
             if not (number_of_songs_failed % 100): print "failed saving chords for", \
                 number_of_songs_failed, "songs."
             continue
-           
+        
         last_chord = None
         #convert to our Chord object format
         for index,chord in enumerate(chord_vector):
@@ -39,7 +39,7 @@ def aquire_song_chords():
             relative_difference = None if not last_chord else (root - last_chord.root)%12
             #instead of creating a huge amount of duplicated Chord instances, 
             #create a new instance only for a first appearing chord in the db.
-            chord, is_new = Chord.objects.get_or_create(root=root, notes=str(notes),\
+            chord, is_new = Chord.objects.get_or_create(root=root, notes=str(notes), original=chord ,\
                                                         relative_difference=relative_difference)
             if is_new: print "created new chord instance - ", root, notes, relative_difference              
             #create the chord_index relationship

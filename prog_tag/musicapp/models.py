@@ -71,6 +71,7 @@ class Chord(models.Model):
     notes = models.CharField(max_length=36) #no option to put tuples or similarly complex objects
     relative_difference = models.IntegerField(null=True)
     previously_failed_chords = models.BooleanField(default = False)
+    original = models.CharField(max_length=30) #the original representation of the chord scraped
         
     '''overriding __init__ disturbes django methods
     def __init__(self, symbol, previous_chord = None):
@@ -91,7 +92,7 @@ class Song(models.Model):
     chords = models.ManyToManyField(Chord,through='Chord_index',null=True)
     
     def __repr__(self):
-        return self.title + "," + self.artist
+        return "{"+self.title + ", " + self.artist+"}"
 
 class Chord_index(models.Model):
     song = models.ForeignKey(Song)

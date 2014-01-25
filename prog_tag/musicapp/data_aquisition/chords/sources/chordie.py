@@ -50,11 +50,13 @@ def get_chord_vector(chords_url):
 Given (artist, title), scrapes *all* suiteble chord vectors
 """
 def get_chords(title,artist):
-    name = "songtitle/"+title.replace(' ','+')+"/songartist/"+artist.replace(' ','+')+"/index.html"
-    all_chords_url = (BASE_URL +"/allsongs.php/"+ name)
-    chord_options = get_chord_options(all_chords_url)
-    return chord_options
-    
+    try:
+        name = "songtitle/"+title.replace(' ','+')+"/songartist/"+artist.replace(' ','+')+"/index.html"
+        all_chords_url = (BASE_URL +"/allsongs.php/"+ name)
+        chord_options = get_chord_options(all_chords_url)
+        return chord_options
+    except:
+        return None
     
     
 def test():
