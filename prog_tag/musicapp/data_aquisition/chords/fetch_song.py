@@ -2,7 +2,8 @@
 import sources.ultimate_guitar as sites_ug
 import sources.e_chords as sites_ec
 import sources.chordie as sites_ch
-
+from time import sleep 
+ 
 class ChordsNotFoundException(Exception):
     title,artist = None, None
     def __init__(self, title, artist):
@@ -16,6 +17,9 @@ when a vector is found - it's returned.
 if no source returns a vector - a 'ChordsNotFoundException' is raised.
 """
 def get_chords(title,artist):
+    
+    sleep(3)
+    
     chord_vectors_c = sites_ch.get_chords(title, artist)
     for chord_vector_c in chord_vectors_c:
         if chord_vector_c:
@@ -46,4 +50,3 @@ def print_all_vectors(title, artist):
 
 def test():
     print_all_vectors("One to all","Yakuzi")
- 
