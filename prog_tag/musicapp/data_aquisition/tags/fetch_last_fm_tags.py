@@ -7,7 +7,7 @@ last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/
 certainty_threshold = 85
 def read_last_fm_tags():
     """
-    read the last.fm song tags dataset, and return a dictionary, where the keys
+    read the last.fm s ong tags dataset, and return a dictionary, where the keys
     are (song_title,artist) tuples, and the values are tag sets.
 
     The dataset is formatted in nested subdirectories, where each file contains
@@ -75,11 +75,10 @@ def last_fm_tags_iterator():
 def update_database_with_last_fm_tags():
     for (title, artist), tags in last_fm_tags_iterator():
         #chords go through Chord_index
-        song = Song(title=title, artist=artist) 
-        tags=[Tag(tag) for tag in tags]
-        (tag.save() for tag in tags)
+        song, created = Song.objects.get_or_create(title=title, artist=artist)
+        if not created: continue
+        tags=[Tag.objects.get_or_create(name=tag) for tag in tags]
         (song.tags.add(tag) for tag in tags)
-        
         #when fails, there's some rollback problem
         song.save()
     print 'done updating database'

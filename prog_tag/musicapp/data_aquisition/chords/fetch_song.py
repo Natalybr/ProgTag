@@ -17,21 +17,20 @@ it gets all chord vectors from all sources and prints them
 def get_chords(title,artist):
 #    print "Starting..."
     chord_vector_s = sites_ec.get_chords(title, artist)
+    if chord_vector_s:
+        return chord_vector_s
 #    print "e-chords: "+str(chord_vector_s)
     chord_vector_u = sites_ug.get_chords(title, artist)
+    if chord_vector_u:
+        return chord_vector_u
 #    print "ultimate: "+str(chord_vector_u)
     chord_vector_c = sites_ch.get_chords(title, artist)
+    if chord_vector_c:
+        return chord_vector_c
 #    for chord_vector_c in chord_vectors_c:
 #        print "chordie: "+str(chord_vector_c)
 #    print "That's it!"
     
-    # TODO choose between vectors (in the right way)
-    if chord_vector_s:
-        return chord_vector_s
-    if chord_vector_u:
-        return chord_vector_u
-    if chord_vector_c:
-        return chord_vector_c
     raise ChordsNotFoundException(title,artist)
     
     
