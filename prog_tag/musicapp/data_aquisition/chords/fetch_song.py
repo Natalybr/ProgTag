@@ -34,7 +34,7 @@ def get_chords(title,artist):
         return chord_vector_u
     
     raise ChordsNotFoundException(title,artist)
-    
+
     
 
 def print_all_vectors(title, artist):

@@ -87,16 +87,14 @@ def get_chord_vector(chords_url):
 given (artist, title), finds best chords, scrapes chord vector
 """
 def get_chords(title,artist):
-    try:
-        name = (artist+"+"+title).replace(' ','+')
-        all_chords_url = (BASE_URL + "search.php?search_type=title&value="+name)
-        best_chords_url = get_best_chords(all_chords_url)
-        if best_chords_url==None: return None
-        chord_vector = get_chord_vector(best_chords_url)
-        #print chord_vector
-        return chord_vector
-    except:
-        return None
+    name = (artist+"+"+title).replace(' ','+')
+    all_chords_url = (BASE_URL + "search.php?search_type=title&value="+name)
+    best_chords_url = get_best_chords(all_chords_url)
+    if best_chords_url==None: return None
+    chord_vector = get_chord_vector(best_chords_url)
+    #print chord_vector
+    return chord_vector
+    
     
     
 def test():

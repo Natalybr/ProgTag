@@ -6,6 +6,14 @@ class Tag(models.Model):
     name = models.CharField(max_length=100)
     def __repr__(self):
         return self.name
+    def __str__(self): return self.__repr__()
+    
+class DecodingFailedException():
+    symbol = None
+    def __init__(self, symbol):
+        self.symbol = symbol
+    def __str__(self):
+        return "Could not decode the chord " + str(self.symbol)
 
 def decode(symbol):
     """
@@ -50,6 +58,11 @@ def decode(symbol):
     if quality == 'M' and additions and additions[0][1] == '7':
         notes[11]=1
         additions = additions[1:]
+    #maj7 immediately after the root is a special case, in which the 'm' does not imply a minor chord
+    if quality == 'm' and additions and additions[0][0] == 'aj':
+        notes[3] = 0
+        notes[4] = 1
+        additions[0] = 'maj',additions[0][1]
     
     if bass_note:
         bass_index = (note_names[bass_note] - root)%12
@@ -62,42 +75,84 @@ def decode(symbol):
         elif modifier in ('+','maj'): notes[chord_degrees[degree] + 1]=1
         else:
             print modifier, degree 
-            raise Exception()
+            raise DecodingFailedException(symbol)
     
     return root, tuple(notes)
 
 class Chord(models.Model):
+    symbol = models.CharField(max_length = 30)
     root = models.IntegerField()
     notes = models.CharField(max_length=36) #no option to put tuples or similarly complex objects
-    relative_difference = models.IntegerField(null=True)
-    previously_failed_chords = models.BooleanField(default = False)
-    original = models.CharField(max_length=30) #the original representation of the chord scraped
-        
-    '''overriding __init__ disturbes django methods
-    def __init__(self, symbol, previous_chord = None):
-        """
-        create an instance of a chord, given a texual symbol representing it. 
-        If another Chord instance is given in previous_chord, store the signed difference 
-        between their roots as well.
-        """
-        self.root, tuple_notes = decode(symbol)
-        self.notes = str(tuple_notes)
-        if previous_chord: self.relative_difference  = (self.root - previous_chord.root)%12
-    '''
+    
+    def __repr__(self):
+        return 'chord: ' + self.symbol + ' root=' + str(self.root) + ' notes=' + str(self.notes)
+    def __str__(self): return self.__repr__()
+    
+class Abstract_chord(models.Model):
+    """
+    only used inside chord progressions, has no data on absolute root and symbol,
+    only the modus (through notes) and the difference in root key from previous chord
+    in the progression (assuming there is one)
+    """
+    root_difference = models.IntegerField(null=True)
+    notes = models.CharField(max_length = 36)
+    def __repr__(self):
+        return 'abstract chord: ' + ' root_difference=' + str(self.root_difference) + ' notes=' + str(self.notes)
+    def __str__(self): return self.__repr__()
+
+class Chord_progression(models.Model):
+    length = models.IntegerField()
+    chords = models.ManyToManyField(Abstract_chord, through='Progression_chord_index')
+    appearances = models.IntegerField()
+    
+    def __repr__(self):
+        chords = [None]*self.length
+        for i in range(self.length):
+            pair = Progression_chord_index.objects.get(progression=self, index = i)
+            chords[i] = pair.chord
+        res = "chord progression: (appearances - " + str(self.appearances) + ")\n"
+        for chord in chords:
+            res += str(chord) + "\n"
+        return res
+    def __str__(self):
+        return self.__repr__()
+
+    
+class Progression_chord_index(models.Model):
+    progression = models.ForeignKey(Chord_progression)
+    chord = models.ForeignKey(Abstract_chord)
+    index = models.IntegerField()
+    def __repr__(self):
+        return "progression_chord_index: " + str(self.chord) + " index " + str(self.index)
+    def __str__(self): return self.__repr__()
+
            
 class Song(models.Model):
     title = models.CharField(max_length=100)
     artist = models.CharField(max_length=100)
     tags = models.ManyToManyField(Tag)
-    chords = models.ManyToManyField(Chord,through='Chord_index',null=True)
+    chords = models.ManyToManyField(Chord,through='Song_chord_index',null=True)
+    previously_failed_chords = models.BooleanField(default = False)
+    progressions = models.ManyToManyField(Chord_progression, through='Song_progression_count')
     
     def __repr__(self):
-        return "{"+self.title + ", " + self.artist+"}"
+        return "song: " + self.title + "," + self.artist
+    def __str__(self): return self.__repr__()
 
-class Chord_index(models.Model):
+class Song_chord_index(models.Model):
     song = models.ForeignKey(Song)
     chord = models.ForeignKey(Chord)
     index = models.IntegerField()
+    
+    def __repr__(self):
+        return "Song chord index: " + str(self.song) +' '+ str(self.chord) +' '+ str(self.index)
+    def __str__(self): return self.__repr__()
+    
+class Song_progression_count(models.Model):
+    song = models.ForeignKey(Song)
+    progression = models.ForeignKey(Chord_progression)
+    appearance_count = models.IntegerField(default = 0)
+    
     
 def test():
     chord1 = "C"
