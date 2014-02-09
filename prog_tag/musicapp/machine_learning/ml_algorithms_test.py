@@ -145,7 +145,3 @@ def makeClassesVector(y):
                 break
     return new_y
 """
-
-
-
-test_ML_algorithms()
