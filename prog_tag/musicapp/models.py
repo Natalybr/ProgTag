@@ -21,8 +21,9 @@ def decode(symbol):
     (root, notes) tuple. Decoding rules roughly taken from -
     http://en.wikipedia.org/wiki/Chord_names_and_symbols_(popular_music)#Rules_to_decode_chord_names_and_symbols
     """    
+    symbol = re.sub('[()]', '', symbol) #so some C(add9) type symbols will be handled correctly
     #represent root key as numbers between 0 and 11. 
-    note_names = dict((('A',0),('B',2),('C',3),('D',5),('E',7),('F',8),('G',10)))
+    note_names = dict((('A',0),('B',2),('C',3),('D',5),('E',7),('F',8),('G',10),('H',2)))#H is old German symbol for B
     accidentals = dict((
         ('b',-1),('♭',-1),
         ('#',1),('♯',1),
@@ -36,30 +37,32 @@ def decode(symbol):
             ('dim', (1,0,0,1,0,0,1,0,0,0,0,0)),
             ('sus4', (1,0,0,0,0,1,0,1,0,0,0,0)),
             ('sus2', (1,0,1,0,0,0,0,1,0,0,0,0)),
+            ('7sus4', (1,0,0,0,0,1,0,1,0,0,1,0)),
+            ('7sus2', (1,0,1,0,0,0,0,1,0,0,1,0)),
             ('M', (1,0,0,0,1,0,0,1,0,0,0,0)),('major', (1,0,0,0,1,0,0,1,0,0,0,0)),
-            ('m', (1,0,0,1,0,0,0,1,0,0,0,0)),('minor', (1,0,0,1,0,0,0,1,0,0,0,0))
+            ('m', (1,0,0,1,0,0,0,1,0,0,0,0)),('minor', (1,0,0,1,0,0,0,1,0,0,0,0)),
+            ('M7', (1,0,0,0,1,0,0,1,0,0,0,1))
         ))
     #map degrees of chord (1-13) to half-tone steps from root (moduli 12)
     #(maj/min)3,8,10 and 12 should not appear explicitly, ever, so are mapped to None
     if "chord_degrees" not in decode.__dict__: 
-        chord_degrees = dict(zip(map(str,range(1,14)),(0,2,None,5,7,9,10,2,5,7)))
+        chord_degrees = dict(zip(map(str,range(1,14)),(0,2,None,5,7,9,10,0,2,None,5,7,9)))
     if "chord_regex" not in decode.__dict__:
         chord_regex = \
-            "([A-G])([#b])?(M|m|Major|Minor|major|minor|aug|dim|sus4|sus2)?([^/]*)(/([A-G])([#b])?)?"
-        
+            "([A-H])([#b])?(Major|Minor|major|minor|M7|M|m|aug|dim|sus4|sus2|7sus4|7sus2)?([^/]*)(/([A-G])([#b])?)?"
+    
+    match = re.match(chord_regex, symbol)  
+    if not match: raise DecodingFailedException(symbol)
     root, accidental , quality, additions, _, bass_note, bass_accidental  = \
-        re.match(chord_regex, symbol).groups()
-    additions = [(addition[:-1],addition[-1]) \
-                 for addition in re.findall("(\D*\d)", additions)]
+        match.groups()
+    additions = [(addition[0],addition[1]) \
+                 for addition in re.findall("(\D*)(\d+)", additions)]
     
     root = note_names[root] if not accidental else note_names[root] + accidentals[accidental]  
     notes = list(qualities[quality]) if quality else list(qualities['major'])
-    #M7 is a special notation, noting the 7'th is a major one, besides denoting quality.
-    if quality == 'M' and additions and additions[0][1] == '7':
-        notes[11]=1
-        additions = additions[1:]
-    #maj7 immediately after the root is a special case, in which the 'm' does not imply a minor chord
-    if quality == 'm' and additions and additions[0][0] == 'aj':
+    
+    #maj[num] or Maj[num] immediately after the root is a special case, in which the 'm' does not imply a minor chord
+    if quality and quality in 'mM' and additions and additions[0][0] == 'aj':
         notes[3] = 0
         notes[4] = 1
         additions[0] = 'maj',additions[0][1]
@@ -71,8 +74,9 @@ def decode(symbol):
     
     
     for modifier,degree in additions:
+        if chord_degrees[degree]==None: raise DecodingFailedException(symbol) #third degree is mapped to None, due to ambiguity
         if not modifier or (modifier == 'add'): notes[chord_degrees[degree]]=1
-        elif modifier in ('+','maj'): notes[chord_degrees[degree] + 1]=1
+        elif modifier in ('+','maj','Maj'): notes[chord_degrees[degree] + 1]=1
         else:
             print modifier, degree 
             raise DecodingFailedException(symbol)
@@ -84,8 +88,22 @@ class Chord(models.Model):
     root = models.IntegerField()
     notes = models.CharField(max_length=36) #no option to put tuples or similarly complex objects
     
-    def __repr__(self):
-        return 'chord: ' + self.symbol + ' root=' + str(self.root) + ' notes=' + str(self.notes)
+#    def __repr__(self):
+#        return 'chord: ' + self.symbol + ' root=' + str(self.root) + ' notes=' + str(self.notes)
+    def __repr__(self): #ugly hack but good enough for now!
+        addition_map = dict(zip(map(str,range(1,12)),('maj1','2','maj2','3','4','maj4','5','maj5','6','7','maj7')))
+        res = ['A','A#','B','C','C#','D','D#','E','F','F#','G','G#'][self.root]
+        notes = list(eval(self.notes))
+        if notes[0] and notes[4] and notes[7]: res += 'M'; notes[0]=notes[4]=notes[7]=0
+        elif notes[0] and notes[3] and notes[7]: res += 'm'; notes[0]=notes[3]=notes[7]=0
+        elif notes[0] and notes[4] and notes[8]: res += 'aug'; notes[0]=notes[4]=notes[8]=0
+        elif notes[0] and notes[3] and notes[6]: res += 'dim'; notes[0]=notes[3]=notes[6]=0
+        elif notes[0] and notes[2] and notes[7]: res += 'sus2'; notes[0]=notes[2]=notes[7]=0
+        elif notes[0] and notes[5] and notes[7]: res += 'sus4'; notes[0]=notes[5]=notes[7]=0
+        for index in range(12):
+            if notes[index]:
+                res += addition_map[index]
+                
     def __str__(self): return self.__repr__()
     
 class Abstract_chord(models.Model):
