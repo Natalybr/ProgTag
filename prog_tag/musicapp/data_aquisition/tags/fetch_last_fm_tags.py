@@ -3,6 +3,7 @@ import json
 from musicapp.models import *
 from django.core import management
 import time
+from musicapp.common_tasks import *
 
 last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
 certainty_threshold = 80
@@ -73,7 +74,7 @@ def last_fm_tags_iterator():
                 average_tags_per_song += len(certain_tags)
                 yield (song_data['title'],song_data['artist']),certain_tags
             if not number_of_songs % 5000:
-                print "songs_read=", number_of_songs, "time taken=", (((time.time() - batch_start_time)/60)//0.1)*0.1, 'minutes'
+                print "songs_read=", number_of_songs, "time taken=", time_elapsed_minutes(batch_start_time)
                 batch_start_time = time.time()
             #delete files already read (helps with re-runs because of errors, but be aware of it!)
             os.remove(os.path.join(root,song_file_path))

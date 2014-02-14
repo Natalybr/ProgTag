@@ -8,7 +8,7 @@ class Tag(models.Model):
         return self.name
     def __str__(self): return self.__repr__()
     
-class DecodingFailedException():
+class DecodingFailedException(Exception):
     symbol = None
     def __init__(self, symbol):
         self.symbol = symbol
@@ -91,6 +91,7 @@ class Chord(models.Model):
 #    def __repr__(self):
 #        return 'chord: ' + self.symbol + ' root=' + str(self.root) + ' notes=' + str(self.notes)
     def __repr__(self): #ugly hack but good enough for now!
+        if self.symbol: return self.symbol
         addition_map = dict(zip(map(str,range(1,12)),('maj1','2','maj2','3','4','maj4','5','maj5','6','7','maj7')))
         res = ['A','A#','B','C','C#','D','D#','E','F','F#','G','G#'][self.root]
         notes = list(eval(self.notes))
@@ -103,6 +104,7 @@ class Chord(models.Model):
         for index in range(12):
             if notes[index]:
                 res += addition_map[index]
+        return res+"(no symbol)"
                 
     def __str__(self): return self.__repr__()
     

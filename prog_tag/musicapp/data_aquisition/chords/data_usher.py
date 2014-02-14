@@ -1,11 +1,13 @@
 import sys
 import os
-from chords.fetch_song import *
 from musicapp.models import *
 from django.core.exceptions import ObjectDoesNotExist
 import random
 import time
 import pickle
+from fetch_song import ChordsNotFoundException, get_chords
+from musicapp.common_tasks import *
+from django.db import transaction
 
 def acquire_db_song_chords():
     """ 
@@ -64,7 +66,7 @@ def acquire_song_chords(title, artist):
     song.previously_failed_chords = False #if this attempt succeeded, remove bad flag
 
 def produce_partial_unchorded_song_lists(amount_of_files):
-    unchorded_songs = Song.objects.filter(chords__isnull = True, ).distinct()
+    unchorded_songs = Song.objects.filter(chords__isnull = True, tags__isnull=False).distinct()#only care about tagged songs
     song_num = len(unchorded_songs)
     path = "C:/Users/arielbro/Documents/chord_progression_project/song_list"
     for file_number in range(amount_of_files):
@@ -85,39 +87,44 @@ def incorporate_song_chords_from_external_source(source_path):
     """
     number_of_songs_read = 0
     number_of_songs_with_existing_chords = 0
-    songs_to_chords = pickle.load(open(source_path,'r'))
+    songs_to_chord_symbols = pickle.load(open(source_path,'r'))
     start_time = time.time()
     #'\r' endings result from windows and linux handling line breaks differently (external source from linux mahcine)
-    songs_to_chords = {(key[0],key[1].replace('\r','')):value for key,value in songs_to_chords.items()}
-    print len(songs_to_chords), "songs to update with chords from file", source_path.split("/")[-1]
-    for title,artist in songs_to_chords.keys():
+    songs_to_chord_symbols = {(key[0],key[1].replace('\r','')):value for key,value in songs_to_chord_symbols.items()}
+#    songs_to_chord_symbols = {(title,artist):value for (title,artist),value in songs_to_chord_symbols.items() if \
+#                              Song.objects.filter(title=title,artist=artist,chords__isnull=True).exists()}#skip already chorded
+    print len(songs_to_chord_symbols), "songs to update with chords from file", source_path.split("/")[-1]
+    #create a mapping from chord symbols to database chords, for less db access in the iterations
+    symbols_to_db_chords = dict()
+    for symbol_list in songs_to_chord_symbols.values():
+        for symbol in symbol_list: 
+            if not symbol in symbols_to_db_chords: 
+                try:
+                    root, notes = decode(symbol)
+                except Exception as e:
+                    print e
+                    break #skip this symbol list, it belongs to a song that will not get saved eventually
+                symbols_to_db_chords[symbol]=Chord.objects.get_or_create(root=root, notes=notes,symbol=symbol)[0]
+    for title,artist in songs_to_chord_symbols.keys():
         try:
-            song = Song.objects.get(title=title, artist=artist, chords__isnull=True)    
-            chord_vector = songs_to_chords[title,artist]
-            for index,chord in enumerate(chord_vector):
-                root, notes = decode(chord)
-                    
-                chord, is_new = Chord.objects.get_or_create(root=root, notes=str(notes), symbol = chord)            
-                Song_chord_index.objects.create(song=song, chord=chord, index=index)   
-    
+            song = Song.objects.get(title=title, artist=artist)  
+            if song.chords.exists():
+                continue
+            chord_symbols_vector = songs_to_chord_symbols[title,artist]
+            chord_vector = [symbols_to_db_chords[symbol] for symbol in chord_symbols_vector]
+            with transaction.commit_on_success():
+                for index,chord in enumerate(chord_vector):
+                    Song_chord_index.objects.create(song=song, chord=chord, index=index)       
             number_of_songs_read += 1
             if not (number_of_songs_read % 100): print "saved chords for", \
                 number_of_songs_read, "songs."
-        except ObjectDoesNotExist:
-#            print title.__repr__(),artist.__repr__()
-#            song = Song.objects.get(title=title, artist=artist)#make sure song does appear, but with chords
-            number_of_songs_with_existing_chords += 1
+        except KeyError as e:
             continue
-        except DecodingFailedException as e:
-            #remove all chords that did get linked to the failed song
-            for song_chord_index in Song_chord_index.objects.filter(song=song): song_chord_index.delete()
+        except Exception as e:#assume exception was before chord linking phase.
             print e
             continue
-        except Exception as e:#assume exception was before chord decoding phase.
-            print e
-            continue
-    print "done updating", len(songs_to_chords), ',', number_of_songs_with_existing_chords, \
-        " of them already updated. Time taken", ((time.time() - start_time)//6)/10, "minutes"
+    print "done updating", len(songs_to_chord_symbols), ',', number_of_songs_with_existing_chords, \
+        " of them already updated. Time taken", time_elapsed_minutes(start_time)
 
 #produce_partial_unchorded_song_lists(8)
 #acquire_db_song_chords()
@@ -132,7 +139,9 @@ def incorporate_song_chords_from_external_source(source_path):
 #    song.save()
 #print 'done resetting chord-fail statuses'
 
-external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project'
-for file_name in os.listdir(external_chords_path):
-    if 'output_dict' in file_name:
-        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    
+print 'number of songs with chords:', Song.objects.filter(chords__isnull=False).distinct().count()
+
+#external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project'
+#for file_name in os.listdir(external_chords_path):
+#    if 'output_dict' in file_name:
+#        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    

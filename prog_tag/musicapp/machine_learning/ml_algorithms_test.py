@@ -6,6 +6,7 @@
 """
  
 import numpy as np
+import pickle
  
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
@@ -17,15 +18,10 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.metrics import classification_report
 from sklearn.metrics import hamming_loss
 from sklearn.metrics import accuracy_score
- 
-all_target_names = ["US 60s 70s Rock and Pop","dance","Smooth Jazz","pop","Freddie Jackson","heavy metal","Elvis Presley","hard rock","John Denver","classic rock","Surf",
-                    "pop rock","killler oldies","baroque pop","piano","20th Century","Classic  Rock","jazz","80ROCK","Disco","instrumental","soft rock","singer-songwriter",
-                    "funk","northern soul","soul","morning","garage","rock","50s","classic country","cher","a very special love song","ann","crossover","new wave","blues",
-                    "marie osmond","folk","90s","oldies","blues rock","memories","motown","female vocalists","1961","Female country","doo wop","country pop","80s","rhythm and blues",
-                    "christmas","paul mccartney","reggae","latin","My all time favourite song","60s","love her music","james taylor","usa hot country songs number one hit","rockabilly",
-                    "70s","Hip-Hop","xtph early","female vocalist","country","metal","Psychedelic Rock","Girl Groups","Progressive rock","Superman" ]
-    
-four_target_names = ["US 60s 70s Rock and Pop","dance","Smooth Jazz","pop"]
+
+from musicapp.models import *
+from ml import compute_tag_indices_lists,compute_frequency_vectors_bulk
+from musicapp.machine_learning.ml import path_to_selected_tags, path_to_frequency_matrix
 
 """
 Run different ML algorithms, and print their scores on the the same data
@@ -37,8 +33,16 @@ def test_ML_algorithms():
     X = all features (chord proggressions). rows=items, columns=features.  
     y = all lables (music tags & generes). rows=items, columns=lables.
     """
-    X, y = getMusicData("train")
-    X_test, y_test = getMusicData("test")
+    songs_with_data = Song.objects.filter(progressions__isnull=False).filter(tags__isnull=False).distinct()
+    leading_tags_set = set(pickle.load(open(path_to_selected_tags,'r')))
+    songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
+    tag_indices_lists = compute_tag_indices_lists(songs_with_data)
+#    frequency_matrix = compute_frequency_vectors_bulk(songs_with_data)
+    frequency_matrix = pickle.load(open(path_to_frequency_matrix,'r'))
+    split_index = int(len(songs_with_data)*0.8)
+
+    X, y = frequency_matrix[:split_index,:], tag_indices_lists[:split_index]
+    X_test, y_test = frequency_matrix[split_index:,:], tag_indices_lists[split_index:]
     
     
     """
@@ -48,7 +52,7 @@ def test_ML_algorithms():
     """
     
     print "TESTING K Nearest Neighbors"
-    for weights in ['uniform', 'distance']:
+    for weights in ['uniform', 'distance']: #read about kmean, and be aware that many features (>=50) will lead to bad results
         test_and_print(X, y, X_test, y_test, 
                        neighbors.KNeighborsClassifier(n_neighbors = 1, weights=weights))
         
@@ -85,7 +89,7 @@ def test_and_print(X, y, X_test, y_test, clf):
     """Start applying different metrics on the classifier results: Hamming loss, Accuracy score, Classification report"""
     
     """The Hamming loss is the fraction of labels that are incorrectly predicted."""
-    hl = hamming_loss(y_test, predicted, all_target_names)
+    hl = hamming_loss(y_test, predicted, [tag.name for tag in pickle.load(open(path_to_selected_tags,'r'))])
     
     """
     In multilabel classification, this function computes subset accuracy:
@@ -95,7 +99,8 @@ def test_and_print(X, y, X_test, y_test, clf):
     ac = accuracy_score(y_test,predicted)
     
     """Print precision, recall, f1-score & support, for all labels."""
-    cr = classification_report(y_test, predicted, target_names=all_target_names)
+    cr = classification_report(y_test, predicted, target_names=\
+                               [tag.name for tag in pickle.load(open(path_to_selected_tags,'r'))])
 
     print "---------------------------------------------------------"
     print "Hamming Loss = "+ str(hl)
@@ -117,8 +122,8 @@ def getMusicData(tr_ts):
 
 
 """
-Given a matrix y, (rows are different items in the dataset, and columns are different features),
-Create a list of lists, a list per each item holds all indexes of the feature it has in the dataset
+Given a matrix y, (rows are different items in the dataset, and columns are different labels),
+Create a list of lists, a list per each item holds all indexes of the label it has in the dataset
 """
 def makeMultiLabelVector(y):
     items, features = y.shape
@@ -145,3 +150,5 @@ def makeClassesVector(y):
                 break
     return new_y
 """
+
+test_ML_algorithms()
