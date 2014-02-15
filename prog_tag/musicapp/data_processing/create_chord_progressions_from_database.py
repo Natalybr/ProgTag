@@ -310,12 +310,11 @@ print 'number of progression chord links to delete:', Progression_chord_index.ob
 print 'number of progressions to delete:', Chord_progression.objects.count()            
 print 'number of abstract chords to delete:', Abstract_chord.objects.count() 
 #can't delete instantly more than 999 items with foreignkey pointing at them :/
-#Song_progression_count.objects.all().delete() 
-#Progression_chord_index.objects.all().delete()
-#Abstract_chord.objects.all().delete()
-#delete_queryset(Chord_progression.objects.all())
-#for progression in Chord_progression.objects.all(): progression.delete()
+Song_progression_count.objects.all().delete() 
+Progression_chord_index.objects.all().delete()
+Abstract_chord.objects.all().delete()
+delete_queryset(Chord_progression.objects.all())
     
 #create_db_progressions()
 #create_db_progressions_buffered(buffer_size=len(Song.objects.filter(chords__isnull=False,progressions__isnull=True).distinct()))
-#create_db_progressions_bulk([4])
+create_db_progressions_bulk([4])
