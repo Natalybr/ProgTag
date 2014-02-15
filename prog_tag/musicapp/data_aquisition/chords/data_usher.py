@@ -16,10 +16,10 @@ def acquire_db_song_chords():
     number_of_songs_read = 0
     number_of_songs_failed = 0
     unchorded_songs = Song.objects.filter(chords__isnull=True, previously_failed_chords=False)
-    print "number of songs without chords (that have not been queried yet) - ", len(unchorded_songs)
-    chorded_songs = {(song.title, song.artist) for song in \
-        Song.objects.filter(chords__isnull=False).distinct()}
-    print "number of songs with chords - ", len(chorded_songs)
+    print "number of songs without chords (that have not been queried yet) - ", unchorded_songs.count()
+#    chorded_songs = {(song.title, song.artist) for song in \
+#        Song.objects.filter(chords__isnull=False).distinct()}
+#    print "number of songs with chords - ", len(chorded_songs)
 #    for song in chorded_songs:
 #        print song
     rand = random.Random()
@@ -44,9 +44,9 @@ def acquire_db_song_chords():
             if not (number_of_songs_failed % 300): print "failed saving chords for", \
                 number_of_songs_failed, "songs."
         #restart program after two hours, since we get weird results otherwise
-        if time.time() - start >= 2*60*60:
-            python = sys.executable
-            os.execl(python, python, * sys.argv)
+#        if time.time() - start >= 2*60*60:
+#            python = sys.executable
+#            os.execl(python, python, * sys.argv)
                   
 def acquire_song_chords(title, artist):
     """
@@ -65,16 +65,16 @@ def acquire_song_chords(title, artist):
         Song_chord_index.objects.create(song=song, chord=chord, index=index)   
     song.previously_failed_chords = False #if this attempt succeeded, remove bad flag
 
-def produce_partial_unchorded_song_lists(amount_of_files):
+def produce_partial_unchorded_song_lists(songs_in_file):
     unchorded_songs = Song.objects.filter(chords__isnull = True, tags__isnull=False).distinct()#only care about tagged songs
     song_num = len(unchorded_songs)
-    path = "C:/Users/arielbro/Documents/chord_progression_project/song_list"
-    for file_number in range(amount_of_files):
+    path = "C:/Users/arielbro/Documents/chord_progression_project/song_lists/song_list"
+    for file_number in range(song_num//songs_in_file): #don't mind the +1 sometimes needed
         with open(path + str(file_number),'w') as output_file:
     #        pickle.dump({(song.title, song.artist) for song in unchorded_songs[file_number*(song_num//amount_of_files):\
     #                                                                           (file_number+1)*(song_num//amount_of_files)]},\
     #                                                                           output_file)
-            for song in unchorded_songs[file_number*(song_num//amount_of_files):(file_number+1)*(song_num//amount_of_files)]:
+            for song in unchorded_songs[file_number*(songs_in_file):(file_number+1)*(songs_in_file)]:
                 try:
                     output_file.write(song.title + "\t" + song.artist + "\n")
                 except:
@@ -126,11 +126,11 @@ def incorporate_song_chords_from_external_source(source_path):
     print "done updating", len(songs_to_chord_symbols), ',', number_of_songs_with_existing_chords, \
         " of them already updated. Time taken", time_elapsed_minutes(start_time)
 
-#produce_partial_unchorded_song_lists(8)
+#produce_partial_unchorded_song_lists(4000)
 #acquire_db_song_chords()
 
-#print len(Song_chord_index.objects.all())
-#for song_chord_index in Song_chord_index.objects.all(): song_chord_index.delete()
+#print Song_chord_index.objects.all().count()
+#Song_chord_index.objects.all().delete()
 #print 'done cleaning song-chord links'
 #for chord in Chord.objects.all(): chord.delete()
 #print 'done removing all chords'
@@ -139,9 +139,7 @@ def incorporate_song_chords_from_external_source(source_path):
 #    song.save()
 #print 'done resetting chord-fail statuses'
 
-print 'number of songs with chords:', Song.objects.filter(chords__isnull=False).distinct().count()
-
-#external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project'
-#for file_name in os.listdir(external_chords_path):
-#    if 'output_dict' in file_name:
-#        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    
+external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project/output_dicts'
+for file_name in os.listdir(external_chords_path):
+    if 'output_dict' in file_name:
+        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    

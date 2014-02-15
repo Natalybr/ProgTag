@@ -34,7 +34,7 @@ def test_ML_algorithms():
     """
     songs_with_data = Song.objects.filter(progressions__isnull=False).filter(tags__isnull=False).distinct()
     leading_tags_set = set(pickle.load(open(path_to_selected_tags,'r')))
-    songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
+#    songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
     tag_indices_lists = compute_tag_indices_lists(songs_with_data)
 #    frequency_matrix = compute_frequency_vectors_bulk(songs_with_data)
     frequency_matrix = pickle.load(open(path_to_frequency_matrix,'r'))
@@ -53,7 +53,7 @@ def test_ML_algorithms():
     print "TESTING K Nearest Neighbors"
     for weights in ['uniform', 'distance']: #read about kmean, and be aware that many features (>=50) will lead to bad results
         test_and_print(X, y, X_test, y_test, 
-                       neighbors.KNeighborsClassifier(n_neighbors = 1, weights=weights))
+                       neighbors.KNeighborsClassifier(n_neighbors = 4, weights=weights))
         
     print "TESTING Linear SVM"
     test_and_print(X, y, X_test, y_test, SVC(kernel="linear", C=0.025))

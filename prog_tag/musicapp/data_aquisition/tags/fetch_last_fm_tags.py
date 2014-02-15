@@ -4,6 +4,7 @@ from musicapp.models import *
 from django.core import management
 import time
 from musicapp.common_tasks import *
+from django.db import transaction
 
 last_home = "C:/Users/arielbro/Documents/chord_progression_project/Data/last.fm/lastfm_train"
 certainty_threshold = 80
@@ -96,9 +97,9 @@ def update_database_with_last_fm_tags():
     
 #management.call_command('syncdb', verbosity=0, interactive=False)
 #management.call_command('flush', verbosity=0, interactive=False)
-print "tag number: " + str(len(Tag.objects.all().distinct()))
-print 'song number: ' + str(len(Song.objects.all().distinct()))
-print "number of songXtag couples: " + str(len(Song.objects.filter(tags__isnull=False)))
+print "tag number: " + str(Tag.objects.all().distinct().count())
+print 'song number: ' + str(Song.objects.all().distinct().count())
+print "number of songXtag couples: " + str(Song.objects.filter(tags__isnull=False).count())
 
 #for tag in Tag.objects.all(): tag.delete()
 update_database_with_last_fm_tags()

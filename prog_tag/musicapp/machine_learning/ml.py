@@ -20,6 +20,7 @@ def select_leading_tags(number_of_tags):
     leading_tags = list(Tag.objects.annotate(song_count=Count('song')).order_by('song_count')[tag_list_index:])
 #    print leading_tags
     pickle.dump(leading_tags,open(path_to_selected_tags,'w'))
+    return leading_tags #in case anyone wants :)
     
 def select_leading_progressions(number_of_progressions):
     """select the number_of_progressions leading progressions, by number of appearances in songs, 
@@ -28,6 +29,7 @@ def select_leading_progressions(number_of_progressions):
     leading_progressions = list(Chord_progression.objects.all().order_by('appearances')[progression_list_index:])
 #    print leading_progressions
     pickle.dump(leading_progressions,open(path_to_selected_progressions,'w'))
+    return leading_progressions #in case someone wants :)
 
 def compute_frequency_vector(song, leading_progressions = None):
     """for a given song, assuming leading progressions are already pickled, compute the vector of their frequencies in it.
@@ -109,6 +111,8 @@ def compute_tag_indices_lists(song_list):
 def build_classifier_for_database():
     #prepare data
     songs_with_data = Song.objects.filter(progressions__isnull=False).filter(tags__isnull=False).distinct()
+    leading_tags_set = set(pickle.load(open(path_to_selected_tags,'r')))
+#    songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
 #    print 'preparing frequency matrix for', len(songs_with_data), "songs."
 #    frequency_matrix = compute_frequency_vectors_bulk(songs_with_data)
     frequency_matrix = pickle.load(open(path_to_frequency_matrix,'r'))
@@ -183,12 +187,12 @@ def store_frequency_matrix(song_list):
 
 if __name__ == "__main__":    
     """testing"""
-    select_leading_progressions(150)
-    select_leading_tags(20)
+    select_leading_progressions(50)
+    leading_tags_set = set(select_leading_tags(1))
     songs_with_data = Song.objects.filter(progressions__isnull=False, tags__isnull=False).distinct()
-    store_frequency_matrix(songs_with_data)
-    
+#    songs_with_data = [song for song in songs_with_data if song in leading_tags_set.intersection(song.tags.all())]
     print 'found', len(songs_with_data), 'songs with progressions and tags'
+    store_frequency_matrix(songs_with_data)
     leading_tags_set = set(pickle.load(open(path_to_selected_tags,'r')))
     #print 'filtering down songs to ones with leading tags'
     #songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
