@@ -54,8 +54,13 @@ def compute_frequency_vectors(song_list):
         if i and not i%1000: print "done for",i,"songs!"
     return frequency_matrix
 
-def compute_frequency_vectors_bulk(song_list):
-    leading_progressions = pickle.load(open(path_to_selected_progressions,'r'))
+
+""" 
+If gets as an input leading_progressions and threshold, creates the feature selection input matrix
+Otherwise, creates the frequency matrix for the ML
+"""  
+def compute_frequency_vectors_bulk(song_list, leading_progressions = None, threshold= 0):
+    if not leading_progressions: leading_progressions = pickle.load(open(path_to_selected_progressions,'r'))
     song_lengths = [song.chords.count() for song in song_list]
     frequency_matrix = numpy.zeros((len(song_list),len(leading_progressions)))
     progress = 0
@@ -73,6 +78,11 @@ def compute_frequency_vectors_bulk(song_list):
             frequency_matrix[song_index,progression_index] = \
                 float(appearance.appearance_count) / (song_lengths[song_index] // appearance.progression.length)
     
+            if threshold >0:
+                if frequency_matrix[song_index,progression_index]>threshold: 
+                    frequency_matrix[song_index,progression_index] = 1
+                else: frequency_matrix[song_index,progression_index] = 0
+                
 #    for prog_index,progression in enumerate(leading_progressions):
 #        for song_index,song in enumerate(song_list):
 #            appearances = Song_progression_count.objects.get(song=song, progression=progression).appearance_count \
