@@ -20,132 +20,97 @@ from sklearn.metrics import accuracy_score
 
 from musicapp.models import *
 from ml import compute_tag_indices_lists,compute_frequency_vectors_bulk
-from musicapp.machine_learning.ml import path_to_selected_tags, path_to_frequency_matrix
-
-"""
-Run different ML algorithms, and print their scores on the the same data
-"""
-def test_ML_algorithms():
-    
-    """
-    Get X, y for both the train data and test data. 
-    X = all features (chord proggressions). rows=items, columns=features.  
-    y = all lables (music tags & generes). rows=items, columns=lables.
-    """
-    songs_with_data = Song.objects.filter(progressions__isnull=False).filter(tags__isnull=False).distinct()
-    leading_tags_set = set(pickle.load(open(path_to_selected_tags,'r')))
-#    songs_with_data = [song for song in songs_with_data if leading_tags_set.intersection(song.tags.all())]
-    tag_indices_lists = compute_tag_indices_lists(songs_with_data)
-#    frequency_matrix = compute_frequency_vectors_bulk(songs_with_data)
-    frequency_matrix = pickle.load(open(path_to_frequency_matrix,'r'))
-    split_index = int(len(songs_with_data)*0.8)
-
-    X, y = frequency_matrix[:split_index,:], tag_indices_lists[:split_index]
-    X_test, y_test = frequency_matrix[split_index:,:], tag_indices_lists[split_index:]
-    
-    
-    """
-    Test the following Machine Learning algorithms: 
-            Nearest Neighbors, Linear SVM, RBF SVM, 
-                        Decision Tree, Random Forest, AdaBoost, Naive Bayes
-    """
-    
-    print "TESTING K Nearest Neighbors"
-    for weights in ['uniform', 'distance']: #read about kmean, and be aware that many features (>=50) will lead to bad results
-        test_and_print(X, y, X_test, y_test, 
-                       neighbors.KNeighborsClassifier(n_neighbors = 4, weights=weights))
-        
-    print "TESTING Linear SVM"
-    test_and_print(X, y, X_test, y_test, SVC(kernel="linear", C=0.025))
-    
-    print "TESTING RBF SVM"
-    test_and_print(X, y, X_test, y_test, SVC(gamma=2, C=1))
-
-    print "TESTING Decision Tree"
-    test_and_print(X, y, X_test, y_test, DecisionTreeClassifier(max_depth=5))
-
-    print "TESTING Random Forest"
-    test_and_print(X, y, X_test, y_test, RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1))
-
-    print "TESTING AdaBoost"
-    test_and_print(X, y, X_test, y_test, AdaBoostClassifier())
-    
-    print "TESTING Naive Bayes"
-    test_and_print(X, y, X_test, y_test, GaussianNB())
-        
-
-def test_and_print(X, y, X_test, y_test, clf):
-    
-    """
-    Create a Multilabel version of the classifier (one classifier per label).
-    Train the classifier with the training data,
-    Then, predict the outcome of the test data. 
-    """
-    clf = OneVsRestClassifier(clf)
-    clf.fit(X, y)
-    predicted = clf.predict(X_test)
-    
-    """Start applying different metrics on the classifier results: Hamming loss, Accuracy score, Classification report"""
-    
-    """The Hamming loss is the fraction of labels that are incorrectly predicted."""
-    hl = hamming_loss(y_test, predicted, [tag.name for tag in pickle.load(open(path_to_selected_tags,'r'))])
-    
-    """
-    In multilabel classification, this function computes subset accuracy:
-    the set of labels predicted for a sample must *exactly* match the
-    corresponding set of labels in y_test.
-    """
-    ac = accuracy_score(y_test,predicted)
-    
-    """Print precision, recall, f1-score & support, for all labels."""
-    cr = classification_report(y_test, predicted, target_names=\
-                               [tag.name for tag in pickle.load(open(path_to_selected_tags,'r'))])
-
-    print "---------------------------------------------------------"
-    print "Hamming Loss = "+ str(hl)
-    print "Accuracy Score = "+str(ac)
-    print "Classification Report = "+str(cr)
-    
-"""
-Read CSV files into an array.
-Each call reads a features file and a labels file
-"""
-def getMusicData(tr_ts):
-    
-    music_data_features = np.genfromtxt('C:/Users/bruchim/Desktop/all_'+tr_ts+'_features.csv', delimiter=',', dtype= 'float')
-    music_data_labels = np.genfromtxt('C:/Users/bruchim/Desktop/all_'+tr_ts+'_labels.csv', delimiter=',')
-    
-    X = music_data_features
-    y = makeMultiLabelVector(music_data_labels)    
-    return X, y
+from musicapp.machine_learning.ml import path_to_selected_tags, path_to_selected_progressions, precision_recall_fscore_support
 
 
-"""
-Given a matrix y, (rows are different items in the dataset, and columns are different labels),
-Create a list of lists, a list per each item holds all indexes of the label it has in the dataset
-"""
-def makeMultiLabelVector(y):
-    items, features = y.shape
-    new_y = [[] for _dummy in xrange(items)]
-    for i in range(items):     
-        for j in range(features):  
-            if (y[i][j]==1): new_y[i].append(j)
-    return new_y
+
+path_to_label_matrix_all_labels = "./label_matrix_all_labels"
+path_to_feature_matrix_all_labels = "./feature_matrix_all_labels"
 
 
-"""
-Given a matrix y, (rows are different items in the dataset, and columns are different features),
-Create a single 1D vector, each item gets the index of the *first* feature it has in the dataset 
-This is used just for checking the normal (not nultilabel) version of algorithms
-
-def makeClassesVector(y):
-    items, features = y.shape
-    new_y = np.zeros(items)
-    for i in range(items):     
-        for j in range(features):  
+def try_all_algorithms_per_label():
+    
+    try_an_algorithm_per_label(neighbors.KNeighborsClassifier(n_neighbors = 4, weights='uniform'), "KNN")    
             
-            if (y[i][j]==1):
-                new_y[i] = j+1
-                break
-    return new_y
-"""
+    try_an_algorithm_per_label(SVC(kernel="linear", C=0.025), "LinearSVM")
+    
+    try_an_algorithm_per_label(SVC(gamma=2, C=1), "SVM")
+    
+    try_an_algorithm_per_label(DecisionTreeClassifier(max_depth=5), "DecisionTree")
+    
+    try_an_algorithm_per_label(RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1), "RandomForest")
+    
+    try_an_algorithm_per_label(AdaBoostClassifier(), "AdaBoost")
+    
+    try_an_algorithm_per_label(GaussianNB() , "Naive Bayes")
+
+    
+def try_an_algorithm_per_label(clf, name):
+    song_list, leading_tags, leading_progressions_by_labels = get_data()
+    split_index = int(len(song_list)*0.8)
+    
+    avg_p = np.zeros(len(leading_progressions_by_labels))
+    avg_r = np.zeros(len(leading_progressions_by_labels))
+    
+    for label_index in range(len(leading_tags)):  
+        
+        label_matrix = label_matrix_all_labels[label_index]
+        feature_matrix = feature_matrix_all_labels[label_index]
+        
+        X, y = feature_matrix[:split_index,:], label_matrix[:split_index]
+        X_test, y_test = feature_matrix[split_index:,:], label_matrix[split_index:]
+    
+        clf.fit(X, y)
+        predicted = clf.predict(X_test)
+
+        p,r,f,s = precision_recall_fscore_support(y_test, predicted, labels=list(range(2)), average="weighted")    
+        
+        avg_p[label_index] = p
+        avg_r[label_index] = r
+        
+    print name +":     precision = "+str(np.average(avg_p))+":     recall = "+str(np.average(avg_r))
+
+
+def compute_Y_per_label(song_list, tag):
+    y = np.zeros(len(song_list))
+    for i, song in enumerate(song_list):
+        song_tags = song.tags.all()
+        if tag in song_tags: y[i] = 1
+    return y
+
+
+def get_data():
+    leading_progressions_by_labels = pickle.load(open(path_to_selected_progressions,'r'))
+    songs_with_data = Song.objects.filter(progressions__isnull=False).filter(tags__isnull=False).distinct()
+    leading_tags = pickle.load(open(path_to_selected_tags,'r'))
+    
+    return songs_with_data, leading_tags, leading_progressions_by_labels
+    
+    
+def compute_x_y_all_labels(load=False):
+    if load: 
+        label_matrix_all_labels = pickle.load(open(path_to_label_matrix_all_labels,'r'))
+        feature_matrix_all_labels = pickle.load(open(path_to_feature_matrix_all_labels,'r'))
+    else:
+        song_list, leading_tags, leading_progressions_by_labels = get_data()
+        #compute Y for all labels
+        label_matrix_all_labels = [np.zeros(len(song_list)) for _i in xrange(len(leading_tags))]
+        #compute X for all labels
+        feature_matrix_all_labels = [np.zeros((len(song_list), len(leading_progressions_by_labels[0]))) for _i in xrange(len(leading_tags))]
+        
+        for label_index, leading_progressions in enumerate(leading_progressions_by_labels):  
+            
+            label_vector = compute_Y_per_label(song_list, leading_tags[label_index])
+            feature_matrix = compute_frequency_vectors_bulk(song_list, leading_progressions)
+            
+            label_matrix_all_labels[label_index] = label_vector
+            feature_matrix_all_labels[label_index] = feature_matrix
+            
+        
+        pickle.dump(label_matrix_all_labels,open(path_to_label_matrix_all_labels,'w'))
+        pickle.dump(feature_matrix_all_labels,open(path_to_feature_matrix_all_labels,'w'))
+  
+    return label_matrix_all_labels, feature_matrix_all_labels
+
+label_matrix_all_labels , feature_matrix_all_labels = compute_x_y_all_labels()
+try_all_algorithms_per_label()
