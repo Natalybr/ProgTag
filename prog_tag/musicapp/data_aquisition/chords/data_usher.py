@@ -66,7 +66,8 @@ def acquire_song_chords(title, artist):
     song.previously_failed_chords = False #if this attempt succeeded, remove bad flag
 
 def produce_partial_unchorded_song_lists(songs_in_file):
-    unchorded_songs = Song.objects.filter(chords__isnull = True, tags__isnull=False).distinct()#only care about tagged songs
+    unchorded_songs = Song.objects.filter(chords__isnull = True, tags__isnull=False,\
+                                          previously_failed_chords=False).distinct()#only care about tagged songs
     song_num = len(unchorded_songs)
     path = "C:/Users/arielbro/Documents/chord_progression_project/song_lists/song_list"
     for file_number in range(song_num//songs_in_file): #don't mind the +1 sometimes needed
@@ -102,7 +103,7 @@ def incorporate_song_chords_from_external_source(source_path):
                 try:
                     root, notes = decode(symbol)
                 except Exception as e:
-                    print e
+#                    print e
                     break #skip this symbol list, it belongs to a song that will not get saved eventually
                 symbols_to_db_chords[symbol]=Chord.objects.get_or_create(root=root, notes=notes,symbol=symbol)[0]
     for title,artist in songs_to_chord_symbols.keys():
@@ -119,14 +120,18 @@ def incorporate_song_chords_from_external_source(source_path):
             if not (number_of_songs_read % 100): print "saved chords for", \
                 number_of_songs_read, "songs."
         except KeyError as e:
+            song.previously_failed_chords = True
+            song.save()
             continue
         except Exception as e:#assume exception was before chord linking phase.
+            song.previously_failed_chords = True
+            song.save()
             print e
             continue
-    print "done updating", len(songs_to_chord_symbols), ',', number_of_songs_with_existing_chords, \
+    print "done updating", number_of_songs_read, ' successfully,', number_of_songs_with_existing_chords, \
         " of them already updated. Time taken", time_elapsed_minutes(start_time)
 
-#produce_partial_unchorded_song_lists(4000)
+#produce_partial_unchorded_song_lists(30000)
 #acquire_db_song_chords()
 
 #print Song_chord_index.objects.all().count()
@@ -139,7 +144,14 @@ def incorporate_song_chords_from_external_source(source_path):
 #    song.save()
 #print 'done resetting chord-fail statuses'
 
-external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project/output_dicts'
-for file_name in os.listdir(external_chords_path):
-    if 'output_dict' in file_name:
-        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    
+#external_chords_path = 'C:/Users/arielbro/Documents/chord_progression_project/output_dicts'
+#for file_name in os.listdir(external_chords_path):
+#    if 'output_dict' in file_name:
+#        incorporate_song_chords_from_external_source(external_chords_path + '/' + file_name)    
+
+for song in Song.objects.all():
+    if '&' in song.title:
+        print song.title
+        for index in Song_chord_index.objects.filter(song=song): index.delete()
+        song.previously_failed_chords = False
+        song.save()

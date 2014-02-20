@@ -37,6 +37,7 @@ def decode(symbol):
             ('dim', (1,0,0,1,0,0,1,0,0,0,0,0)),
             ('sus4', (1,0,0,0,0,1,0,1,0,0,0,0)),
             ('sus2', (1,0,1,0,0,0,0,1,0,0,0,0)),
+            ('sus9', (1,0,1,0,0,0,0,1,0,0,0,0)),
             ('7sus4', (1,0,0,0,0,1,0,1,0,0,1,0)),
             ('7sus2', (1,0,1,0,0,0,0,1,0,0,1,0)),
             ('M', (1,0,0,0,1,0,0,1,0,0,0,0)),('major', (1,0,0,0,1,0,0,1,0,0,0,0)),
@@ -49,7 +50,7 @@ def decode(symbol):
         chord_degrees = dict(zip(map(str,range(1,14)),(0,2,None,5,7,9,10,0,2,None,5,7,9)))
     if "chord_regex" not in decode.__dict__:
         chord_regex = \
-            "([A-H])([#b])?(Major|Minor|major|minor|M7|M|m|aug|dim|sus4|sus2|7sus4|7sus2)?([^/]*)(/([A-G])([#b])?)?"
+            "([A-H])([#b])?(Major|Minor|major|minor|M7|M|m|aug|dim|sus9|sus4|sus2|7sus4|7sus2)?([^/]*)(/([A-G])([#b])?)?"
     
     match = re.match(chord_regex, symbol)  
     if not match: raise DecodingFailedException(symbol)
@@ -78,7 +79,7 @@ def decode(symbol):
         if not modifier or (modifier == 'add'): notes[chord_degrees[degree]]=1
         elif modifier in ('+','maj','Maj'): notes[chord_degrees[degree] + 1]=1
         else:
-            print modifier, degree 
+#            print modifier, degree 
             raise DecodingFailedException(symbol)
     
     return root, tuple(notes)

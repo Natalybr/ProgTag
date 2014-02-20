@@ -18,6 +18,9 @@ if no source returns a vector - a 'ChordsNotFoundException' is raised.
 """
 def get_chords(title,artist):
     
+    title = title.replace('&', 'and')
+    artist = artist.replace('&', 'and') #querying sites with & causes all input after & to be ignored.
+    
     sleep(3)
     
     chord_vectors_c = sites_ch.get_chords(title, artist)

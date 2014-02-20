@@ -12,4 +12,3 @@ def delete_queryset(queryset):
         queryset[i].delete()
         if not (i+1)%999: transaction.commit()
     transaction.commit()
-        

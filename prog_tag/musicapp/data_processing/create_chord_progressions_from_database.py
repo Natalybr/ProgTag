@@ -317,4 +317,4 @@ delete_queryset(Chord_progression.objects.all())
     
 #create_db_progressions()
 #create_db_progressions_buffered(buffer_size=len(Song.objects.filter(chords__isnull=False,progressions__isnull=True).distinct()))
-create_db_progressions_bulk([4])
+create_db_progressions_bulk([3,4,5,6])
