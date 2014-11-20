@@ -1,29 +1,16 @@
 HarmoniTag
 ======
 
-Songs tagging system.
+A system for tagging songs based on their [chord progressions](http://en.wikipedia.org/wiki/Chord_progression).
 
 Overview
 --------
 
-HarmoniTag is a system for tagging songs using their chord progression. HarmoniTag
-consists of a tagged songs database, and a machine learning code to generate important
-chord progressions for tagging, and later use them to make an algorithm for automatically
-tagging songs. HarmoniTag encourages you to improve database/code in order to get even
-better result. HarmoniTag can be used for many applications like songs recommendation,
-and is using chord progression to generate tags, which makes it faster then DSP, and
-more reliable then croud-sourcing.
+HarmoniTag is a project and pipeline aimed at for tagging songs, utilizing machine learning to infer genres by the appearances of chord progressions. Its first iteration was made as part of a CS workshop for B.Sc. It is currently under work, to refine the methods use for scientific publication.
+The data used is taken from the [Million Song Dataset's Last.fm dataset](http://labrosa.ee.columbia.edu/millionsong/lastfm), and various chord websites (such as chordie.com and ultimate-guitar.com).
 
-Install
--------
-
-
-
-Releases
---------
-
-
-
-Documentation
--------------
-
+The GitHub repository mostly contains code for:
+1. A Django ORM database structure for storing song/tag/chord-progression data (database itself not included in the repository).
+2. Populating the database with song-tag data from the Last.fm dataset. 
+3. Populating the database with song-chord data by querying and parsing relevant websites.
+4. Performing feature selection, training and testing various models of machine learning on the data.
